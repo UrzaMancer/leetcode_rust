@@ -1,25 +1,21 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 struct TreeLevel {
     value: i32,
-    child_sum: i64,
-    children: Vec<i32>,
+    adjacencies: Vec<i32>,
 }
 
 impl TreeLevel {
-    pub fn new(node: &i32, child: &i32, values: &Vec<i32>) -> Self {
+    pub fn new(val: i32) -> Self {
         Self {
-            value: values[*node as usize],
-            child_sum: values[*child as usize] as i64,
-            children: vec![*child],
+            value: val,
+            adjacencies: Vec::new(),
         }
     }
     
-    pub fn add_child(&mut self, child: &i32, values: &Vec<i32>) {
-        
-        self.child_sum += values[*child as usize] as i64;
-        self.children.push(*child);
+    pub fn add_adjacent(&mut self, relative: i32) {
+        self.adjacencies.push(relative);
     }
 }
 
@@ -32,33 +28,48 @@ impl Solution {
     //          / \      /  \
     //        6(5) 5(3) 3(7) 4(4)
 
-    fn maximum_subtree(subroot: &i32, subtrees: &HashMap<i32, TreeLevel>) -> i64 {
+    fn maximum_subtree(subroot: &i32, parent: &i32, subtrees: &HashMap<i32, TreeLevel>) -> i64 {
         if let Some(node) = subtrees.get(subroot) {
-            match (node.value as i64) < node.child_sum {
+            if subroot != parent && node.adjacencies.len() <= 1 { return 0i64; }
+            let c_sum: i64 = 
+                        node.adjacencies.iter()
+                            .map(|adj| match (adj == parent, subtrees.get(adj)) {
+                                    (false, Some(child)) => child.value as i64,
+                                    _ => 0i64
+                            })
+                            .sum::<i64>();
+
+            match (node.value as i64) < c_sum {
                 // if node value is less than the sum of its children,
                 // then we are done with this branch: we "leave" the parent
                 // and replace with 0 (take for our score) all childrens' subtrees
-                true => Self::subtree_sum(subroot, &subtrees),
+                true => Self::subtree_sum(subroot, parent, &subtrees) - node.value as i64,
                 false => node.value as i64 
-                            + node.children.iter()
-                                .map(|child| Self::maximum_subtree(child, &subtrees))
+                            + node.adjacencies.iter()
+                                .map(|adj| match adj == parent {
+                                    true => 0i64,
+                                    false => Self::maximum_subtree(adj, parent, &subtrees),
+                                })
                                 .sum::<i64>(),
             }
         } else { 0i64 }
     }
     
-    fn subtree_sum(subroot: &i32, subtrees: &HashMap<i32, TreeLevel>) -> i64 {
+    fn subtree_sum(subroot: &i32, parent: &i32, subtrees: &HashMap<i32, TreeLevel>) -> i64 {
         if let Some(node) = subtrees.get(subroot) {
-            node.children.iter()
-                .map(|child| Self::subtree_sum(child, &subtrees))
+            node.adjacencies.iter()
+                .map(|adj| match parent == adj {
+                    false => Self::subtree_sum(adj, subroot, &subtrees),
+                    true => 0i64,
+                    })
                 .sum::<i64>()
-            + node.child_sum
+            + node.value as i64
         } else { 0i64 }
     }
     
     pub fn maximum_score_after_operations(edges: Vec<Vec<i32>>, values: Vec<i32>) -> i64 {
         
-        let mut non_leaves: HashMap<i32, TreeLevel> = HashMap::new();
+        let mut nodes: HashMap<i32, TreeLevel> = HashMap::with_capacity(values.len());
 
         for edge in edges {
             // we cannot assume edges[i] are sorted
@@ -70,25 +81,17 @@ impl Solution {
             // [[0,6],[0,4],[2,6],[6,5],[4,1],[3,4]] \ [20,4,5,7,10,3,9] -> 40
             // Node indices have changed, but this is the same tree as the primary
             // testcase: we must evaluate parent by relationship from root
-            //
-            // ... this is stupid I should just make an adjacency list
-            // I don't know why I fought it to start with :(
 
-            let (parent, child) = match edge[0] < edge[1] {
-                true => (edge[0], edge[1]),
-                false => (edge[1], edge[0]),
-            };
-            
-            if let Some(subtree) = non_leaves.get_mut(&parent) {
-                subtree.add_child(&child, &values);
-            } else {
-                non_leaves.insert(parent, TreeLevel::new(&parent, &child, &values));
-            }
+            let (u, v) = (edge[0], edge[1]);
+            nodes.entry(u).or_insert(TreeLevel::new(values[u as usize]))
+                .add_adjacent(v);
+            nodes.entry(v).or_insert(TreeLevel::new(values[v as usize]))
+                .add_adjacent(u);   
         }
         
-        println!("{:?}", non_leaves);
+        //println!("{:?}", nodes);
         
-        Self::maximum_subtree(&0, &non_leaves)
+        Self::maximum_subtree(&0, &0, &nodes)
     }
 }
 
@@ -115,3 +118,5 @@ impl Solution {
 // [1000000000,1000000000,1000000000,1000000000]
 // [[7,0],[3,1],[6,2],[4,3],[4,5],[4,6],[4,7]]
 // [2,16,23,17,22,21,8,6]
+// [[1,0],[9,1],[6,2],[7,4],[3,5],[7,3],[9,6],[7,8],[7,9]]
+// [14,17,13,18,17,10,23,19,22,2] -> 153
