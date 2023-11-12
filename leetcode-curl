@@ -1,0 +1,8 @@
+#!/bin/zsh
+vared -cp "SESSION: " S; vared -cp "csrf: " C
+curl --location 'https://leetcode.com/graphql/' \
+--header 'Content-Type: application/json' \
+--header "Cookie: LEETCODE_SESSION=${S} csrftoken=${C}" \
+--data '{"query":"$(cat leetcode_query.graphql)"}'
+unset S C
+# curl --request POST -d "{\"password\":\"${P}\"}" https://example.com/login/${U}; unset P U

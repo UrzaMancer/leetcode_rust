@@ -1,0 +1,29 @@
+query getQuestionDetail($titleSlug: String!) {
+  question(titleSlug: $titleSlug) {
+    questionId
+    title
+    content
+    isPaidOnly
+    difficulty
+    likes
+    dislikes
+    topicTags {
+      name
+      slug
+    }
+    codeSnippets {
+      lang
+      langSlug
+      code
+      __typename
+    }
+    stats
+    hints
+    status
+    sampleTestCase
+    metaData
+    judgerAvailable
+    judgeType
+    envInfo 
+  }
+}
