@@ -4,7 +4,7 @@ import sys
 import json
 
 DEFAULT_QUERY = "playground"
-DEFAULT_VARIABLES = r'{"titleSlug":"two-sum"}'
+DEFAULT_VARIABLES = r'{"titleSlug":"sort-vowels-in-a-string"}'
 DEFAULT_OPERATION_NAME = "getQuestionDetail"
 
 def get_csrf_token(fname = "token"):
